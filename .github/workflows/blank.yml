@@ -4,7 +4,7 @@ on:
   workflow_dispatch:
     inputs:
       access_password:
-        description: 'Defina uma senha para o usuario (runner)'
+        description: 'Senha do usuario (runner)'
         required: true
         default: '123456'
 
@@ -22,13 +22,22 @@ jobs:
           echo "runner:${{ github.event.inputs.access_password }}" | sudo chpasswd
           sudo usermod -aG sudo runner
 
-      - name: Instalar Servidor de Area de Trabalho e Ferramentas
+      - name: Instalar Servidor de Area de Trabalho
         run: |
           sudo apt update
           sudo apt install -y xfce4 xfce4-goodies tightvncserver
 
-      - name: Instalar o Ngrok
-        uses: ngrok/ngrok-action@v2
-        with:
-          authtoken: ${{ secrets.NGROK_AUTHTOKEN }}
-          port: 5900
+      - name: Instalar Ngrok Oficial
+        run: |
+          curl -s https://ngrok-agent.s3.amazonaws.com/ngrok.asc | sudo tee /etc/apt/trusted.gpg.d/ngrok.asc >/dev/null
+          echo "deb https://ngrok-agent.s3.amazonaws.com buster main" | sudo tee /etc/apt/sources.list.d/ngrok.list
+          sudo apt update && sudo apt install ngrok -y
+
+      - name: Iniciar VNC e Conexao Ngrok
+        run: |
+          mkdir -p ~/.vnc
+          echo "${{ github.event.inputs.access_password }}" | vncpasswd -f > ~/.vnc/passwd
+          chmod 600 ~/.vnc/passwd
+          vncserver :1 -geometry 1280x720 -depth 24
+          ngrok config add-authtoken ${{ secrets.NGROK_AUTHTOKEN }}
+          ngrok tcp 5901
