@@ -4,7 +4,7 @@ on:
   workflow_dispatch:
     inputs:
       access_password:
-        description: 'Defina uma senha para o usuário (runner)'
+        description: 'Defina uma senha para o usuario (runner)'
         required: true
         default: '123456'
 
@@ -17,18 +17,18 @@ jobs:
       - name: Checkout Repository
         uses: actions/checkout@v4
 
-      - name: Configurar Senha do Usuário
+      - name: Configurar Senha do Usuario
         run: |
           echo "runner:${{ github.event.inputs.access_password }}" | sudo chpasswd
           sudo usermod -aG sudo runner
 
-      - name: Instalar Servidor de Área de Trabalho e Ferramentas
+      - name: Instalar Servidor de Area de Trabalho e Ferramentas
         run: |
           sudo apt update
           sudo apt install -y xfce4 xfce4-goodies tightvncserver
 
       - name: Instalar o Ngrok
-        uses: ngrok/ngrok-action@v1
+        uses: ngrok/ngrok-action@v2
         with:
-          auth-token: ${{ secrets.NGROK_AUTHTOKEN }}
-          
+          authtoken: ${{ secrets.NGROK_AUTHTOKEN }}
+          port: 5900
