@@ -15,7 +15,7 @@ jobs:
 
       - name: Autenticar e Iniciar Tunnel RDP
         run: |
-          ngrok config add-authtoken ${{ secrets.NGROK_AUTHTOKEN }}
+          ngrok config add-authtoken SEU_TOKEN_AQUI
           Start-Process -FilePath "ngrok" -ArgumentList "tcp 3389"
           Start-Sleep -Seconds 10
           $log = Invoke-RestMethod -Uri http://127.0.0.1:4040/api/tunnels
