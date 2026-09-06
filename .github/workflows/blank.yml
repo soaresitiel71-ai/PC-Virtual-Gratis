@@ -9,15 +9,14 @@ jobs:
     timeout-minutes: 360
 
     steps:
-      - name: Baixar e Instalar Ngrok
+      - name: Instalar Ngrok
         run: |
-          Invoke-WebRequest -Uri "https://bin.equinox.io/c/b4Pvu3rwcdU/ngrok-v3-stable-windows-amd64.zip" -OutFile "ngrok.zip"
-          Expand-Archive -Path "ngrok.zip" -DestinationPath "."
+          choco install ngrok -y
 
       - name: Autenticar e Iniciar Tunnel RDP
         run: |
-          .\ngrok.exe config add-authtoken ${{ secrets.NGROK_AUTHTOKEN }}
-          Start-Process -FilePath ".\ngrok.exe" -ArgumentList "tcp 3389"
+          ngrok config add-authtoken ${{ secrets.NGROK_AUTHTOKEN }}
+          Start-Process -FilePath "ngrok" -ArgumentList "tcp 3389"
           Start-Sleep -Seconds 10
           $log = Invoke-RestMethod -Uri http://127.0.0.1:4040/api/tunnels
           $publicUrl = $log.tunnels[0].public_url -replace 'tcp://', ''
