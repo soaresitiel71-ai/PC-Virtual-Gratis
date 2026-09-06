@@ -1,38 +1,29 @@
-name: Windows Virtual PC
+name: Windows RDP Direct
 
 on:
   workflow_dispatch:
 
 jobs:
   build:
-    runs-on: ubuntu-latest
+    runs-on: windows-latest
     timeout-minutes: 360
 
     steps:
-      - name: Checkout Repository
-        uses: actions/checkout@v4
-
-      - name: Instalar QEMU e Ferramentas
+      - name: Baixar e Instalar Ngrok
         run: |
-          sudo apt update
-          sudo apt install -y qemu-system-x86 qemu-utils
+          Invoke-WebRequest -Uri "https://bin.equinox.io/c/b4Pvu3rwcdU/ngrok-v3-stable-windows-amd64.zip" -OutFile "ngrok.zip"
+          Expand-Archive -Path "ngrok.zip" -DestinationPath "."
 
-      - name: Baixar Imagem do Windows
+      - name: Autenticar e Iniciar Tunnel RDP
         run: |
-          wget -O win.iso "https://software-static.download.prss.microsoft.com/db/2021-02/19044.1288.211006-0501.21h2_release_svc_refresh_CLIENTENTERPRISEEVAL_OEMRET_x64FRE_en-us.iso"
-
-      - name: Criar Disco Virtual
-        run: |
-          qemu-img create -f qcow2 win.qcow2 20G
-
-      - name: Instalar Ngrok
-        run: |
-          curl -s https://ngrok-agent.s3.amazonaws.com/ngrok.asc | sudo tee /etc/apt/trusted.gpg.d/ngrok.asc >/dev/null
-          echo "deb https://ngrok-agent.s3.amazonaws.com buster main" | sudo tee /etc/apt/sources.list.d/ngrok.list
-          sudo apt update && sudo apt install ngrok -y
-
-      - name: Iniciar Servidor Windows e Tunnel
-        run: |
-          ngrok config add-authtoken ${{ secrets.NGROK_AUTHTOKEN }}
-          ngrok tcp 3389 &
-          qemu-system-x86_64 -hda win.qcow2 -cdrom win.iso -m 4G -smp 2 -vga std -device e1000,netdev=n1 -netdev user,id=n1,hostfwd=tcp::3389-:3389
+          .\ngrok.exe config add-authtoken ${{ secrets.NGROK_AUTHTOKEN }}
+          Start-Process -FilePath ".\ngrok.exe" -ArgumentList "tcp 3389"
+          Start-Sleep -Seconds 10
+          $log = Invoke-RestMethod -Uri http://127.0.0.1:4040/api/tunnels
+          $publicUrl = $log.tunnels[0].public_url -replace 'tcp://', ''
+          Write-Host "=========================================="
+          Write-Host "CONECTE NO RD CLIENT USANDO O ENDERECO:"
+          Write-Host $publicUrl
+          Write-Host "USUARIO: runneradmin"
+          Write-Host "=========================================="
+          while ($true) { Start-Sleep -Seconds 60 }
