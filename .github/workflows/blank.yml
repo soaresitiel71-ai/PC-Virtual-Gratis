@@ -9,6 +9,11 @@ jobs:
     timeout-minutes: 360
 
     steps:
+      - name: Ativar RDP no Windows
+        run: |
+          Set-ItemProperty -Path 'HKLM:\System\CurrentControlSet\Control\Terminal Server' -Name "fDenyTSConnections" -Value 0
+          Enable-NetFirewallRule -DisplayGroup "Remote Desktop"
+
       - name: Instalar Ngrok
         run: |
           choco install ngrok -y
@@ -17,7 +22,7 @@ jobs:
         run: |
           ngrok config add-authtoken SEU_TOKEN_AQUI
           Start-Process -FilePath "ngrok" -ArgumentList "tcp 3389"
-          Start-Sleep -Seconds 10
+          Start-Sleep -Seconds 15
           $log = Invoke-RestMethod -Uri http://127.0.0.1:4040/api/tunnels
           $publicUrl = $log.tunnels[0].public_url -replace 'tcp://', ''
           Write-Host "=========================================="
