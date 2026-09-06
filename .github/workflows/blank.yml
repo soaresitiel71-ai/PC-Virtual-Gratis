@@ -1,12 +1,7 @@
-name: Virtual PC Online
+name: Windows Virtual PC
 
 on:
   workflow_dispatch:
-    inputs:
-      access_password:
-        description: 'Defina uma senha para o usuario (runner)'
-        required: true
-        default: '123456'
 
 jobs:
   build:
@@ -17,17 +12,27 @@ jobs:
       - name: Checkout Repository
         uses: actions/checkout@v4
 
-      - name: Configurar Senha do Usuario
-        run: |
-          echo "runner:${{ github.event.inputs.access_password }}" | sudo chpasswd
-          sudo usermod -aG sudo runner
-
-      - name: Instalar Servidor de Area de Trabalho e Ferramentas
+      - name: Instalar QEMU e Ferramentas
         run: |
           sudo apt update
-          sudo apt install -y xfce4 xfce4-goodies tightvncserver
+          sudo apt install -y qemu-system-x86 qemu-utils
 
-      - name: Instalar o Ngrok
-        uses: ngrok/ngrok-action@v1
-        with:
-          auth-token: ${{ secrets.NGROK_AUTHTOKEN }}
+      - name: Baixar Imagem do Windows
+        run: |
+          wget -O win.iso "https://software-static.download.prss.microsoft.com/db/2021-02/19044.1288.211006-0501.21h2_release_svc_refresh_CLIENTENTERPRISEEVAL_OEMRET_x64FRE_en-us.iso"
+
+      - name: Criar Disco Virtual
+        run: |
+          qemu-img create -f qcow2 win.qcow2 20G
+
+      - name: Instalar Ngrok
+        run: |
+          curl -s https://ngrok-agent.s3.amazonaws.com/ngrok.asc | sudo tee /etc/apt/trusted.gpg.d/ngrok.asc >/dev/null
+          echo "deb https://ngrok-agent.s3.amazonaws.com buster main" | sudo tee /etc/apt/sources.list.d/ngrok.list
+          sudo apt update && sudo apt install ngrok -y
+
+      - name: Iniciar Servidor Windows e Tunnel
+        run: |
+          ngrok config add-authtoken ${{ secrets.NGROK_AUTHTOKEN }}
+          ngrok tcp 3389 &
+          qemu-system-x86_64 -hda win.qcow2 -cdrom win.iso -m 4G -smp 2 -vga std -device e1000,netdev=n1 -netdev user,id=n1,hostfwd=tcp::3389-:3389
